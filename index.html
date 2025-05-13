@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head><title>Send OTP</title></head>
+<body>
+  <h2>Send OTP to User</h2>
+  <input type="text" id="identity" placeholder="Enter Identity" />
+  <button onclick="sendOTP()">Send OTP</button>
+  <p id="response"></p>
+
+  <script>
+    async function sendOTP() {
+      const identity = document.getElementById("identity").value;
+      document.getElementById("response").innerText = "Sending...";
+      try {
+        const res = await fetch("/.netlify/functions/send-otp", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ identity })
+        });
+        const data = await res.json();
+        document.getElementById("response").innerText = JSON.stringify(data);
+      } catch (err) {
+        document.getElementById("response").innerText = "Error: " + err.message;
+      }
+    }
+  </script>
+</body>
+</html>
