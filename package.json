@@ -1,0 +1,1 @@
+{"name": "otp-netlify", "version": "1.0.0", "description": "Netlify OTP project with node-fetch", "dependencies": {"node-fetch": "^2.6.1"}}
