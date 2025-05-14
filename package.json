@@ -1,0 +1,8 @@
+{
+  "name": "otp-app",
+  "version": "1.0.0",
+  "description": "Netlify app to send OTPs and log to Google Sheets",
+  "dependencies": {
+    "node-fetch": "^2.6.1"
+  }
+}
