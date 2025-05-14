@@ -1,27 +1,167 @@
 <!DOCTYPE html>
-<html>
-<head><title>Send OTP</title></head>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Phone Number Change Verification</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: Arial, sans-serif; padding: 2rem; background-color: #f0f4f8; }
+    h2 { color: #333; }
+    form {
+      background-color: white;
+      padding: 2rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      max-width: 600px;
+      margin: auto;
+    }
+    label { display: block; margin-top: 1rem; font-weight: bold; }
+    input[type="text"], input[type="tel"] {
+      width: 100%;
+      padding: 0.5rem;
+      margin-top: 0.3rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    .btn-group {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-top: 1rem;
+    }
+    button {
+      padding: 0.6rem 1.2rem;
+      background-color: #007BFF;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button.secondary { background-color: #6c757d; }
+    button.danger { background-color: #dc3545; }
+    .output { margin-top: 1rem; font-size: 0.9rem; color: green; white-space: pre-line; }
+    .hidden { display: none; }
+  </style>
+</head>
 <body>
-  <h2>Send OTP to User</h2>
-  <input type="text" id="identity" placeholder="Enter Identity" />
-  <button onclick="sendOTP()">Send OTP</button>
-  <p id="response"></p>
+  <h2>Customer Phone Number Change Verification</h2>
+  <form id="otpForm">
+    <label>Agent Name:</label>
+    <input type="text" id="agentName" required>
+
+    <label>Agent ID:</label>
+    <input type="text" id="agentId" required>
+
+    <label>Customer ID (KB ID):</label>
+    <input type="text" id="kbId" required>
+
+    <label>Customer's Original Phone Number:</label>
+    <input type="tel" id="oldPhone" required>
+
+    <label>Customer's New Phone Number:</label>
+    <input type="tel" id="newPhone" required>
+
+    <label>Does the customer have access to the old SIM / WhatsApp?</label>
+    <div class="btn-group">
+      <button type="button" onclick="setAccess(true)">Yes</button>
+      <button type="button" onclick="setAccess(false)" class="secondary">No</button>
+    </div>
+
+    <div id="otpSection" class="hidden">
+      <label>Generated OTP:</label>
+      <input type="text" id="otp" readonly>
+      <div class="btn-group">
+        <button type="button" onclick="generateOTP()">Reset OTP</button>
+      </div>
+      <div class="btn-group">
+        <button type="button" onclick="sendMessage('Push')">Send via Push</button>
+        <button type="button" onclick="sendMessage('SMS')">Send via SMS</button>
+        <button type="button" onclick="sendMessage('WA')">Send via WhatsApp</button>
+      </div>
+    </div>
+
+    <div id="formSection" class="hidden">
+      <button type="button" onclick="sendFormMessage()">Send Google Form via WA</button>
+    </div>
+
+    <div class="btn-group" style="margin-top: 2rem;">
+      <button type="button" class="danger" onclick="resetForm()">Reset Entire Form</button>
+    </div>
+
+    <div class="output" id="outputMsg"></div>
+  </form>
 
   <script>
-    async function sendOTP() {
-      const identity = document.getElementById("identity").value;
-      document.getElementById("response").innerText = "Sending...";
-      try {
-        const res = await fetch("/.netlify/functions/send-otp", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ identity })
-        });
-        const data = await res.json();
-        document.getElementById("response").innerText = JSON.stringify(data);
-      } catch (err) {
-        document.getElementById("response").innerText = "Error: " + err.message;
+    let hasAccess = false;
+
+    function setAccess(value) {
+      hasAccess = value;
+      if (value) {
+        document.getElementById('otpSection').classList.remove('hidden');
+        document.getElementById('formSection').classList.add('hidden');
+        generateOTP();
+      } else {
+        document.getElementById('otpSection').classList.add('hidden');
+        document.getElementById('formSection').classList.remove('hidden');
       }
+      document.getElementById('outputMsg').innerText = '';
+    }
+
+    function generateOTP() {
+      const otp = Math.floor(1000 + Math.random() * 9000);
+      document.getElementById('otp').value = otp;
+    }
+
+    function collectFormData() {
+      return {
+        agentName: document.getElementById("agentName").value,
+        agentId: document.getElementById("agentId").value,
+        kbId: document.getElementById("kbId").value,
+        oldPhone: document.getElementById("oldPhone").value,
+        newPhone: document.getElementById("newPhone").value,
+        otp: document.getElementById("otp").value,
+      };
+    }
+
+    async function sendMessage(channel) {
+      const payload = collectFormData();
+      payload.channel = channel;
+      payload.messageType = "OTP";
+
+      const res = await fetch("/.netlify/functions/send-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      const result = await res.json();
+      document.getElementById("outputMsg").innerText += `[${channel}] ${result.message || "No response"}
+`;
+    }
+
+    async function sendFormMessage() {
+      const payload = collectFormData();
+      payload.otp = "";
+      payload.channel = "WA";
+      payload.messageType = "Form";
+
+      const res = await fetch("/.netlify/functions/send-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      const result = await res.json();
+      document.getElementById("outputMsg").innerText += `[Form WA] ${result.message || "No response"}
+`;
+    }
+
+    function resetForm() {
+      document.getElementById("otpForm").reset();
+      document.getElementById("otp").value = "";
+      document.getElementById("outputMsg").innerText = "";
+      document.getElementById("otpSection").classList.add("hidden");
+      document.getElementById("formSection").classList.add("hidden");
     }
   </script>
 </body>
