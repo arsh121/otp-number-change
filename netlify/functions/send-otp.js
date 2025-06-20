@@ -12,7 +12,7 @@ exports.handler = async function(event) {
       if (channel === "Push") {
         const pushPayload = {
           to: { identity: [kbId] },
-          campaign_id: "1747039170",
+          campaign_id: "1750396281",
           ExternalTrigger: { OTP: otp }
         };
 
